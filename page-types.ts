@@ -7,7 +7,7 @@ interface PageMetadata {
     type?: string,
     tags?: Array<string>,
     siteName?: string
-    icon: boolean,
+    hasIcon: boolean,
     language?: string,
 }
 
@@ -23,7 +23,7 @@ export interface PageBodyHeadings {
 export interface PageLink {
     innerText: string,
     href: string,
-    bias: Number
+    bias: number
 }
 
 interface PageBody {

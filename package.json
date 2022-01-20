@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.25.0",
+    "elasticsearch": "^16.7.2",
     "node-fetch": "^3.1.1",
     "puppeteer": "^13.1.1"
   },
