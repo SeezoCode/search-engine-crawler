@@ -40,8 +40,8 @@ export interface Page {
     body: PageBody
 
     url: string
-    crawlerTimestamp: Number
-    userRating: Number
-    bias: Number
-    createdTimestamp?: Number
+    crawlerTimestamp: number
+    userRating: number
+    bias: number
+    createdTimestamp?: number
 }

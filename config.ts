@@ -1,9 +1,9 @@
-export const DEBUG = true
 export const elasticAddress = "http://localhost:9200"
+export const timeUntilReindex = 1000 * 60 * 60 * 24 * 7 // 1 week
 export const elasticIndex = "se12"
-export const startingUrls: string[] = ["https://www.seznamzpravy.cz", "https://www.mozilla.org", "https://www.goodreads.com", "https://blog.iservery.com"]
+export const startingUrls: string[] = ["https://www.wikipedia.cz", "https://www.mozilla.org", "https://www.goodreads.com", "https://blog.iservery.com"]
 export const maxDepth = 10
 export const maxPages = 1000
 export const domainLimit = null
 export const visitExternalDomains = true
-export const threads = 10
+// export const threads = 10

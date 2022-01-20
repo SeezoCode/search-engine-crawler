@@ -1,4 +1,4 @@
-import {DEBUG, elasticAddress} from "./config"
+import {elasticAddress, timeUntilReindex} from "./config"
 import * as puppeteer from "puppeteer"
 import {Client} from "elasticsearch"
 import {CrawlPage} from "./page-crawler"
@@ -63,8 +63,19 @@ export class Crawler extends CrawlPage {
             // @ts-ignore
             hits: result.hits.total.value,
             // @ts-ignore
-            crawlerTimestamp: result.hits.hits[0]?._source.crawlerTimestamp
+            crawlerTimestamp: result.hits.hits[0]?._source.crawlerTimestamp,
+            // @ts-ignore
+            source: result.hits.hits[0]?._source,
+            id: result.hits.hits[0]?._id
         }
+    }
+
+    async deleteId(index: string) {
+        // @ts-ignore
+        await this.client.delete({
+            index: this.index,
+            id: index
+        })
     }
 
     async safeCrawlPage(url: string): Promise<Page | null> {
@@ -73,12 +84,21 @@ export class Crawler extends CrawlPage {
             return null
         } else this.sessionCrawled.push(url)
 
-        const isPageIndexed = await this.isPageIndexed(url)
+        // @ts-ignore
+        const isPageIndexed: {hits: number, crawlerTimestamp: number, source: Page, id: string} = await this.isPageIndexed(url)
 
         if (this.browser) {
             if (isPageIndexed.hits > 0) {
                 console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Page was indexed ${isPageIndexed.hits}x ${Math.round((Date.now() - isPageIndexed.crawlerTimestamp) / 1000 / 60)}m ago: ${url}`)
-                return DEBUG ? (await this.crawlPage(this.browser, url)) : null
+                if (isPageIndexed.source.crawlerTimestamp + timeUntilReindex < Date.now()) {
+                    console.log(isPageIndexed.source.crawlerTimestamp + timeUntilReindex, Date.now())
+                    console.log("- Page is too old, reindexing (id: " + isPageIndexed.id + ")")
+                    await this.deleteId(isPageIndexed.id)
+                    const page = await this.crawlPage(this.browser, url)
+                    await this.elasticIndex(page)
+                    return page
+                }
+                return isPageIndexed.source
             } else {
                 this.newlyCrawledPagesAmount += 1
                 console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Indexing page: ${url}`)
