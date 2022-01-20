@@ -4,17 +4,18 @@ import {Client} from "elasticsearch"
 import {CrawlPage} from "./page-crawler"
 import {Page} from "./page-types"
 
+
 export class Crawler extends CrawlPage {
+    // @ts-ignore
     client = new Client({node: elasticAddress})
-    browser: puppeteer.Browser
+    browser: puppeteer.Browser | undefined
     crawledPagesAmount: number = 0
     newlyCrawledPagesAmount: number = 0
     sessionCrawled: Array<string> = []
     sessionStart = new Date().getTime()
 
-    constructor(private startUrl: string, private maxDepth: number, private maxPages: number, private index: string) {
+    constructor(private startUrl: string, private maxDepth: number, private maxPages: number, private index: string, private domainLimit: number | null = null, private visitExternalDomains = true) {
         super()
-        this.browser = this.browser
     }
 
     async run() {
@@ -26,22 +27,25 @@ export class Crawler extends CrawlPage {
 
     async stop() {
         console.log("\n\nStopping crawler")
-        console.log(`Crawled pages: ${this.crawledPagesAmount}\nNewly indexed: ${this.newlyCrawledPagesAmount}\ntook: ${(new Date().getTime() - this.sessionStart) / 1000} seconds\n`)
-        await this.browser.close()
+        console.log(`Crawled pages: ${this.crawledPagesAmount}\nNewly indexed: ${this.newlyCrawledPagesAmount}\nTook: ${(new Date().getTime() - this.sessionStart) / 1000} seconds\n`)
+        await this.browser?.close()
     }
 
     async launchBrowser() {
-        return await puppeteer.launch({
+        return puppeteer.launch({
             headless: true,
         });
     }
 
     async elasticIndex(body: Page) {
-        const result = await this.client.index({
+        const now = Date.now()
+        // @ts-ignore
+        const index = await this.client.index({
             index: this.index,
             body: body
         })
-        return result
+        console.log(`Indexed page in ${Date.now() - now}ms`)
+        return index
     }
 
     async isPageIndexed(url: string) {
@@ -55,37 +59,68 @@ export class Crawler extends CrawlPage {
                 }
             }
         })
-        return result.hits.total.value > 0
+        return {
+            // @ts-ignore
+            hits: result.hits.total.value,
+            // @ts-ignore
+            crawlerTimestamp: result.hits.hits[0]?._source.crawlerTimestamp
+        }
     }
 
     async safeCrawlPage(url: string): Promise<Page | null> {
         if (this.sessionCrawled.includes(url)) {
-            console.log(`                  - Page already crawled this session: ${url} `)
+            // console.log(`                  - Page already crawled this session: ${url} `)
             return null
         } else this.sessionCrawled.push(url)
 
-        if (await this.isPageIndexed(url)) {
-            console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Page already indexed in DB: ${url}`)
-            return DEBUG ? (await this.crawlPage(this.browser, url)) : null
+        const isPageIndexed = await this.isPageIndexed(url)
+
+        if (this.browser) {
+            if (isPageIndexed.hits > 0) {
+                console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Page was indexed ${isPageIndexed.hits}x ${Math.round((Date.now() - isPageIndexed.crawlerTimestamp) / 1000 / 60)}m ago: ${url}`)
+                return DEBUG ? (await this.crawlPage(this.browser, url)) : null
+            } else {
+                this.newlyCrawledPagesAmount += 1
+                console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Indexing page: ${url}`)
+                const page = await this.crawlPage(this.browser, url)
+                await this.elasticIndex(page)
+                return page
+            }
         } else {
-            this.newlyCrawledPagesAmount += 1
-            console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Indexing page: ${url}`)
-            const page = await this.crawlPage(this.browser, url)
-            await this.elasticIndex(page)
-            return page
+            throw new Error("Browser is not defined")
         }
     }
 
     async recursiveCrawling(url: string, depth: number) {
         const page = await this.safeCrawlPage(this.cleanUrl(url))
         if (page) {
-            const links = await page.body.internalLinks
-            for (const link of links) {
-                if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
-                    this.crawledPagesAmount += 1
-                    await this.recursiveCrawling(link.href, depth + 1)
-                } else {
-                    break
+            const internalLinks = page.body.internalLinks
+            if (internalLinks?.length) {
+                for (let i = 0; i < internalLinks.length; i++) {
+                    if (this.domainLimit && this.domainLimit > i) break
+                    if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
+                        this.crawledPagesAmount += 1
+                        try {
+                            await this.recursiveCrawling(internalLinks[i].href, depth + 1)
+                        } catch (e) {
+                            console.log(`                  - IError indexing internal: ${internalLinks[i].href}`)
+                        }
+                    } else break;
+                }
+            }
+            if (this.visitExternalDomains) {
+                const externalLinks = page.body.externalLinks
+                if (externalLinks?.length) {
+                    for (let i = 0; i < externalLinks.length; i++) {
+                        if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
+                            this.crawledPagesAmount += 1
+                            try {
+                                await this.recursiveCrawling(externalLinks[i].href, depth + 1)
+                            } catch (e) {
+                                console.log(`                  - Error indexing external: ${externalLinks[i].href}`)
+                            }
+                        } else break;
+                    }
                 }
             }
         }

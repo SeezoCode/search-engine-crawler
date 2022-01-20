@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "run": "tsc main.ts && node main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,6 +17,7 @@
     "puppeteer": "^13.1.1"
   },
   "devDependencies": {
+    "@types/elasticsearch": "^5.0.40",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.4"
   }

@@ -8,7 +8,7 @@ interface PageMetadata {
     tags?: Array<string>,
     siteName?: string
     hasIcon: boolean,
-    language?: string,
+    language?: string | null,
 }
 
 export interface PageBodyHeadings {
@@ -29,7 +29,7 @@ export interface PageLink {
 interface PageBody {
     headings: PageBodyHeadings
     plaintext?: string
-    article?: Array<string>
+    article?: Array<string> | null
     internalLinks?: Array<PageLink>
     externalLinks?: Array<PageLink>
     imgLinks?: Array<string>

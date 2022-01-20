@@ -14,7 +14,7 @@ export class CrawlPage {
     async crawlPage(browser: puppeteer.Browser, url: string): Promise<Page> {
         const page: puppeteer.Page = await browser.newPage();
         await page.goto(url, {
-            // waitUntil: 'networkidle2'
+            // waitUntil - network idle2
         });
         const doc = await this.mapPageToObject(page, url)
         await page.close()
@@ -22,25 +22,25 @@ export class CrawlPage {
     }
 
     async getMeta(page: puppeteer.Page): Promise<MetaTag[]> {
-        const arr = page.$$eval("head > meta", tags => tags.map(tag => {
+        // @ts-ignore
+        return page.$$eval("head > meta", tags => tags.map(tag => {
             return {
                 name: tag.getAttribute("name") || tag.getAttribute("property"),
                 content: tag.getAttribute('content')
             }
         }))
-        return arr
     }
 
     async getBodyAsPlaintext(page: puppeteer.Page): Promise<string> {
         return page.evaluate(() => document.body.innerText)
     }
 
-    async getBodyAsHTML(page: puppeteer.Page): Promise<string> {
-        const body = page.evaluate(() => document.body.innerHTML)
-        return body
-    }
+    // async getBodyAsHTML(page: puppeteer.Page): Promise<string> {
+    //     const body = page.evaluate(() => document.body.innerHTML)
+    //     return body
+    // }
 
-    protected cleanUrl(url: string): string {
+    cleanUrl(url: string): string {
         const urlParts = url.split('?')
         if (urlParts[0].endsWith('/#') || urlParts[0].endsWith('#')) {
             urlParts[0] = urlParts[0].slice(0, -1)
@@ -48,35 +48,39 @@ export class CrawlPage {
         if (urlParts[0].endsWith('/')) {
             urlParts[0] = urlParts[0].slice(0, -1)
         }
-        return urlParts[0]
+        return urlParts[0].split('#')[0]
     }
 
     async getPageLinks(page: puppeteer.Page): Promise<Array<PageLink>> {
+        // @ts-ignore
         return page.$$eval("a", links => links.map((link: HTMLLinkElement) => {
-            const urlParts = link.href.split('?')
-            if (urlParts[0].endsWith('/#') || urlParts[0].endsWith('#')) {
-                urlParts[0] = urlParts[0].slice(0, -1)
-            }
-            if (urlParts[0].endsWith('/')) {
-                urlParts[0] = urlParts[0].slice(0, -1)
+            function cleanUrl(url: string): string {
+                const urlParts = url.split('?')
+                if (urlParts[0].endsWith('/#') || urlParts[0].endsWith('#')) {
+                    urlParts[0] = urlParts[0].slice(0, -1)
+                if (urlParts[0].endsWith('/')) {
+                    urlParts[0] = urlParts[0].slice(0, -1)
+                }
+                }
+                return urlParts[0].split('#')[0]
             }
             return {
                 innerText: link.innerText,
-                href: urlParts[0],
+                href: cleanUrl(link.href),
                 bias: 0.
             }
         }))
     }
 
-// TODO: assing bias value to links like "dowload" or "about"
+// TODO: assign bias value to links like "download" or "about"
     determineLinkTypes(links: PageLink[], url: string): { internal: Array<PageLink>, external: Array<PageLink> } {
-        const obj = {
+        const obj: {internal: PageLink[], external: PageLink[]} = {
             internal: [],
             external: []
         }
         for (let link of links) {
             if (link && link.href) {
-                if (link.href.split("/")[2]?.startsWith(url.split("/")[2])) {
+                if (link.href.split("/")[2] == url.split("/")[2].replace("www.", "")) {
                     obj.internal.push(link)
                 } else {
                     obj.external.push(link)
@@ -86,9 +90,13 @@ export class CrawlPage {
         return obj
     }
 
-    async getLanguage(page: puppeteer.Page): Promise<string> {
+    async getLanguage(page: puppeteer.Page): Promise<string | null> {
         return page.evaluate(() => {
-            return document.querySelector("html").getAttribute("lang")
+            const attribute = document.querySelector("html")
+            if (attribute) {
+                return attribute.getAttribute("lang")
+            }
+            else return null
         })
     }
 
@@ -103,22 +111,25 @@ export class CrawlPage {
             h6: []
         }
         for (let i = 1; i <= 6; i++) {
+            // @ts-ignore
             obj[`h${i}`] = await page.$$eval(`h${i}`, links => links.map((link: HTMLHeadingElement) => link.innerText.replace(/\s+/g, " ")))
         }
         return obj
     }
 
-    async getArticle(page: puppeteer.Page): Promise<string> {
+    async getArticle(page: puppeteer.Page): Promise<string | null> {
         return page.evaluate(() => {
-            return document.querySelector("article")?.innerText
+            const article = document.querySelector("article")
+            if (article) {
+                return article.innerHTML
+            }
+            else return null
         })
-        return ""
     }
 
     async mapPageToObject(page: puppeteer.Page, url: string): Promise<Page> {
         const pageLinksPromise = this.getPageLinks(page)
         const bodyAsPlaintextPromise = this.getBodyAsPlaintext(page)
-        const bodyAsHTMLPromise = this.getBodyAsHTML(page)
         const metaPromise = this.getMeta(page)
         const languagePromise = this.getLanguage(page)
         const headingsPromise = this.getHeadings(page)
@@ -126,13 +137,12 @@ export class CrawlPage {
 
         const pageLinks = this.determineLinkTypes(await pageLinksPromise, url)
         const bodyAsPlaintext = await bodyAsPlaintextPromise
-        const bodyAsHTML = await bodyAsHTMLPromise
         const meta = await metaPromise
         const language = await languagePromise
         const headings = await headingsPromise
         const article = await articlePromise
 
-        const metaObj: any = meta.reduce((acc, curr) => {
+        const metaObj: any = meta.reduce((acc: any, curr) => {
             acc[curr.name] = curr.content
             return acc
         }, {})
@@ -160,7 +170,7 @@ export class CrawlPage {
                     h5: headings.h5,
                     h6: headings.h6
                 },
-                plaintext: bodyAsPlaintext?.replace(/\n|\t/g, ' '),
+                plaintext: bodyAsPlaintext?.replace(/[\n\t]/g, ' '),
                 article: article?.split("\n").filter(line => line.length > 0) || null,
                 internalLinks: pageLinks.internal,
                 externalLinks: pageLinks.external,
