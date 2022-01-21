@@ -6,10 +6,8 @@ interface MetaTag {
     content: string
 }
 
-
 export class CrawlPage {
-    constructor() {
-    }
+    constructor() {}
 
     async crawlPage(browser: puppeteer.Browser, url: string): Promise<Page> {
         const page: puppeteer.Page = await browser.newPage();
@@ -77,10 +75,15 @@ export class CrawlPage {
         }
         for (let link of links) {
             if (link && link.href) {
+                const linkObj = {
+                    innerText: CrawlPage.polishPlaintextToArray(link.innerText).join(' '),
+                    href: link.href,
+                    bias: 0.
+                }
                 if (link.href.split("/")[2] == url.split("/")[2].replace("www.", "")) {
-                    obj.internal.push(link)
+                    obj.internal.push(linkObj)
                 } else {
-                    obj.external.push(link)
+                    obj.external.push(linkObj)
                 }
             }
         }
@@ -122,6 +125,12 @@ export class CrawlPage {
             }
             else return null
         })
+    }
+
+    private static polishPlaintextToArray(text: string): string[] {
+        const plaintext = text.replace(/[\n\t]/g, ' ').split(" ").filter(Boolean).join(" ")
+        const plaintextWords = plaintext.split(" ").filter(Boolean)
+        return plaintextWords.map(word => word.toLowerCase())
     }
 
     async mapPageToObject(page: puppeteer.Page, url: string): Promise<Page> {
@@ -167,7 +176,7 @@ export class CrawlPage {
                     h5: headings.h5,
                     h6: headings.h6
                 },
-                plaintext: bodyAsPlaintext?.replace(/[\n\t]/g, ' '),
+                plaintext: CrawlPage.polishPlaintextToArray(bodyAsPlaintext),
                 article: article?.split("\n").filter(line => line.length > 0) || null,
                 internalLinks: pageLinks.internal,
                 externalLinks: pageLinks.external,
