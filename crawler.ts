@@ -13,6 +13,7 @@ export class Crawler extends CrawlPage {
     newlyCrawledPagesAmount: number = 0
     sessionCrawled: Array<string> = []
     sessionStart = new Date().getTime()
+    crawledPagesByDomain: { [domain: string]: number } = {}
 
     constructor(private startUrl: string, private maxDepth: number, private maxPages: number, private index: string, private domainLimit: number | null = null, private visitExternalDomains = true) {
         super()
@@ -20,7 +21,7 @@ export class Crawler extends CrawlPage {
 
     async run() {
         this.browser = await this.launchBrowser()
-        await this.recursiveCrawling(this.startUrl, 0)
+        await this.recursiveCrawling(this.startUrl)
 
         await this.stop()
     }
@@ -44,7 +45,7 @@ export class Crawler extends CrawlPage {
             index: this.index,
             body: body
         })
-        console.log(`Indexed page in ${Date.now() - now}ms`)
+        console.log(`${" ".repeat(20)}Elastic indexed page in ${Date.now() - now}ms`)
         return index
     }
 
@@ -138,41 +139,52 @@ export class Crawler extends CrawlPage {
             await this.elasticIndex(page)
             return page
         } else {
-            console.log("Page is empty, skipping")
+            console.log(`Page is empty, skipping ${url}`)
             return null
         }
     }
 
-    async recursiveCrawling(url: string, depth: number) {
-        const page = await this.safeCrawlPage(this.cleanUrl(url))
-        if (page) {
-            const internalLinks = page.body.internalLinks
-            if (internalLinks?.length) {
-                for (let i = 0; i < internalLinks.length; i++) {
-                    if (this.domainLimit && this.domainLimit > i) break
-                    if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
-                        try {
-                            await this.recursiveCrawling(internalLinks[i].href, depth + 1)
-                        } catch (e) {
-                            console.log(`                  - IError indexing internal: ${internalLinks[i].href}`)
-                        }
-                    } else break;
-                }
-            }
-            if (this.visitExternalDomains) {
-                const externalLinks = page.body.externalLinks
-                if (externalLinks?.length) {
-                    for (let i = 0; i < externalLinks.length; i++) {
-                        if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
-                            try {
-                                await this.recursiveCrawling(externalLinks[i].href, depth + 1)
-                            } catch (e) {
-                                console.log(`                  - Error indexing external: ${externalLinks[i].href}`)
-                            }
+    getDomain(url: string) {
+        return url.split("/")[2]
+    }
+
+    countDomain(domain: string) {
+        if (this.crawledPagesByDomain.hasOwnProperty(domain)) {
+            this.crawledPagesByDomain[domain] += 1
+        } else {
+            this.crawledPagesByDomain[domain] = 1
+        }
+    }
+
+    async recursiveCrawling(url: string, depth: number = 0) {
+        try {
+            this.countDomain(this.getDomain(this.cleanUrl(url)))
+            const page = await this.safeCrawlPage(this.cleanUrl(url))
+            if (page) {
+                const internalLinks = page.body.internalLinks
+                if (internalLinks?.length) {
+                    for (const linkObj of internalLinks) {
+                        if (this.domainLimit && this.domainLimit <= this.crawledPagesByDomain[this.getDomain(this.cleanUrl(linkObj.href))]) break
+                        if (this.crawledPagesAmount <= this.maxPages && depth <= this.maxDepth) {
+                                await this.recursiveCrawling(linkObj.href, depth + 1)
                         } else break;
                     }
                 }
+                if (this.visitExternalDomains) {
+                    const externalLinks = page.body.externalLinks
+                    if (externalLinks?.length) {
+                        for (const linkObj of externalLinks) {
+                            if (this.domainLimit && this.domainLimit <= this.crawledPagesByDomain[this.getDomain(this.cleanUrl(linkObj.href))]) break
+                            if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
+                                    await this.recursiveCrawling(linkObj.href, depth + 1)
+                            } else break;
+                        }
+                    }
+                }
             }
+        } catch (e) {
+            console.log(`${" ".repeat(18)}- Error indexing: ${url}`)
+            return null
         }
     }
 }

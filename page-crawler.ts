@@ -14,14 +14,14 @@ export class CrawlPage {
     async crawlPage(browser: puppeteer.Browser, url: string): Promise<Page> {
         const page: puppeteer.Page = await browser.newPage();
         await page.goto(url, {
-            // waitUntil - network idle2
+            waitUntil: 'networkidle0',
         });
         const doc = await this.mapPageToObject(page, url)
         await page.close()
         return doc
     }
 
-    async getMeta(page: puppeteer.Page): Promise<MetaTag[]> {
+    private static async getMeta(page: puppeteer.Page): Promise<MetaTag[]> {
         // @ts-ignore
         return page.$$eval("head > meta", tags => tags.map(tag => {
             return {
@@ -31,14 +31,9 @@ export class CrawlPage {
         }))
     }
 
-    async getBodyAsPlaintext(page: puppeteer.Page): Promise<string> {
+    private async getBodyAsPlaintext(page: puppeteer.Page): Promise<string> {
         return page.evaluate(() => document.body.innerText)
     }
-
-    // async getBodyAsHTML(page: puppeteer.Page): Promise<string> {
-    //     const body = page.evaluate(() => document.body.innerHTML)
-    //     return body
-    // }
 
     cleanUrl(url: string): string {
         const urlParts = url.split('?')
@@ -48,10 +43,11 @@ export class CrawlPage {
         if (urlParts[0].endsWith('/')) {
             urlParts[0] = urlParts[0].slice(0, -1)
         }
+        urlParts[0] = urlParts[0].replace("www.", "")
         return urlParts[0].split('#')[0]
     }
 
-    async getPageLinks(page: puppeteer.Page): Promise<Array<PageLink>> {
+    private async getPageLinks(page: puppeteer.Page): Promise<Array<PageLink>> {
         // @ts-ignore
         return page.$$eval("a", links => links.map((link: HTMLLinkElement) => {
             function cleanUrl(url: string): string {
@@ -61,6 +57,7 @@ export class CrawlPage {
                 if (urlParts[0].endsWith('/')) {
                     urlParts[0] = urlParts[0].slice(0, -1)
                 }
+                urlParts[0] = urlParts[0].replace("www.", "")
                 }
                 return urlParts[0].split('#')[0]
             }
@@ -72,8 +69,8 @@ export class CrawlPage {
         }))
     }
 
-// TODO: assign bias value to links like "download" or "about"
-    determineLinkTypes(links: PageLink[], url: string): { internal: Array<PageLink>, external: Array<PageLink> } {
+    // TODO: assign bias value to links like "download" or "about"
+    private static determineLinkTypes(links: PageLink[], url: string): { internal: Array<PageLink>, external: Array<PageLink> } {
         const obj: {internal: PageLink[], external: PageLink[]} = {
             internal: [],
             external: []
@@ -90,7 +87,7 @@ export class CrawlPage {
         return obj
     }
 
-    async getLanguage(page: puppeteer.Page): Promise<string | null> {
+    private async getLanguage(page: puppeteer.Page): Promise<string | null> {
         return page.evaluate(() => {
             const attribute = document.querySelector("html")
             if (attribute) {
@@ -101,7 +98,7 @@ export class CrawlPage {
     }
 
 //  Promise<Array<Array<string>>>
-    async getHeadings(page: puppeteer.Page): Promise<PageBodyHeadings> {
+    private static async getHeadings(page: puppeteer.Page): Promise<PageBodyHeadings> {
         let obj: PageBodyHeadings = {
             h1: [],
             h2: [],
@@ -117,7 +114,7 @@ export class CrawlPage {
         return obj
     }
 
-    async getArticle(page: puppeteer.Page): Promise<string | null> {
+    private async getArticle(page: puppeteer.Page): Promise<string | null> {
         return page.evaluate(() => {
             const article = document.querySelector("article")
             if (article) {
@@ -130,12 +127,12 @@ export class CrawlPage {
     async mapPageToObject(page: puppeteer.Page, url: string): Promise<Page> {
         const pageLinksPromise = this.getPageLinks(page)
         const bodyAsPlaintextPromise = this.getBodyAsPlaintext(page)
-        const metaPromise = this.getMeta(page)
+        const metaPromise = CrawlPage.getMeta(page)
         const languagePromise = this.getLanguage(page)
-        const headingsPromise = this.getHeadings(page)
+        const headingsPromise = CrawlPage.getHeadings(page)
         const articlePromise = this.getArticle(page)
 
-        const pageLinks = this.determineLinkTypes(await pageLinksPromise, url)
+        const pageLinks = CrawlPage.determineLinkTypes(await pageLinksPromise, url)
         const bodyAsPlaintext = await bodyAsPlaintextPromise
         const meta = await metaPromise
         const language = await languagePromise
