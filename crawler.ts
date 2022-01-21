@@ -78,36 +78,68 @@ export class Crawler extends CrawlPage {
         })
     }
 
+    isUrlLegit(url: string) {
+        if (url.endsWith(".jpg")) return false
+        if (url.endsWith(".png")) return false
+        if (url.endsWith(".gif")) return false
+        if (url.endsWith(".tar")) return false
+        return !url.endsWith(".zip");
+    }
+
+    hasPageContent(page: Page): boolean {
+        const plaintext = page.body.plaintext
+        if (plaintext) {
+            if (plaintext.length > 0) return true
+        }
+        return false
+    }
+
     async safeCrawlPage(url: string): Promise<Page | null> {
-        if (this.sessionCrawled.includes(url)) {
+        if (this.sessionCrawled.includes(url) || !this.isUrlLegit(url)) {
             // console.log(`                  - Page already crawled this session: ${url} `)
             return null
-        } else this.sessionCrawled.push(url)
-
-        // @ts-ignore
-        const isPageIndexed: {hits: number, crawlerTimestamp: number, source: Page, id: string} = await this.isPageIndexed(url)
-
-        if (this.browser) {
+        } else {
+            this.sessionCrawled.push(url)
+            this.crawledPagesAmount += 1
+            // @ts-ignore
+            const isPageIndexed: { hits: number, crawlerTimestamp: number, source: Page, id: string } = await this.isPageIndexed(url)
             if (isPageIndexed.hits > 0) {
                 console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Page was indexed ${isPageIndexed.hits}x ${Math.round((Date.now() - isPageIndexed.crawlerTimestamp) / 1000 / 60)}m ago: ${url}`)
                 if (isPageIndexed.source.crawlerTimestamp + timeUntilReindex < Date.now()) {
-                    console.log(isPageIndexed.source.crawlerTimestamp + timeUntilReindex, Date.now())
-                    console.log("- Page is too old, reindexing (id: " + isPageIndexed.id + ")")
-                    await this.deleteId(isPageIndexed.id)
-                    const page = await this.crawlPage(this.browser, url)
-                    await this.elasticIndex(page)
-                    return page
+                    console.log("reindexing")
+                    return await this.reindexOldPage(isPageIndexed)
                 }
                 return isPageIndexed.source
             } else {
-                this.newlyCrawledPagesAmount += 1
-                console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Indexing page: ${url}`)
-                const page = await this.crawlPage(this.browser, url)
-                await this.elasticIndex(page)
-                return page
+                return await this.handleElasticIndex(url)
             }
+        }
+    }
+
+    async reindexOldPage(isPageIndexed: { hits: number, crawlerTimestamp: number, source: Page, id: string }) {
+        if (this.hasPageContent(isPageIndexed.source)) {
+            await this.elasticIndex(isPageIndexed.source)
+            return isPageIndexed.source
         } else {
-            throw new Error("Browser is not defined")
+            console.log("Page is empty, deleting (id: " + isPageIndexed.id + ")")
+            await this.deleteId(isPageIndexed.id)
+            return null
+        }
+    }
+
+    async handleElasticIndex(url: string) {
+        if (!this.browser) throw new Error("Browser is not defined")
+
+        const page = await this.crawlPage(this.browser, url)
+
+        if (this.hasPageContent(page)) {
+            this.newlyCrawledPagesAmount += 1
+            console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Indexing page: ${url}`)
+            await this.elasticIndex(page)
+            return page
+        } else {
+            console.log("Page is empty, skipping")
+            return null
         }
     }
 
@@ -119,7 +151,6 @@ export class Crawler extends CrawlPage {
                 for (let i = 0; i < internalLinks.length; i++) {
                     if (this.domainLimit && this.domainLimit > i) break
                     if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
-                        this.crawledPagesAmount += 1
                         try {
                             await this.recursiveCrawling(internalLinks[i].href, depth + 1)
                         } catch (e) {
@@ -133,7 +164,6 @@ export class Crawler extends CrawlPage {
                 if (externalLinks?.length) {
                     for (let i = 0; i < externalLinks.length; i++) {
                         if (this.crawledPagesAmount < this.maxPages && depth < this.maxDepth) {
-                            this.crawledPagesAmount += 1
                             try {
                                 await this.recursiveCrawling(externalLinks[i].href, depth + 1)
                             } catch (e) {

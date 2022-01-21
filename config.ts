@@ -1,9 +1,15 @@
-export const elasticAddress = "http://localhost:9200"
-export const timeUntilReindex = 1000 * 60 * 60 * 24 * 7 // 1 week
-export const elasticIndex = "se12"
-export const startingUrls: string[] = ["https://www.wikipedia.cz", "https://www.mozilla.org", "https://www.goodreads.com", "https://blog.iservery.com"]
-export const maxDepth = 10
-export const maxPages = 1000
-export const domainLimit = null
-export const visitExternalDomains = true
-// export const threads = 10
+export const elasticAddress: string = "http://localhost:9200"
+export const timeUntilReindex: number = 1000 * 60 * 60 * 24 * 7 // 1 week
+export const elasticIndex: string = "se12"
+export const startingUrls: string[] = [
+    "https://www.mozilla.org",
+    "https://www.goodreads.com",
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+]
+export const maxDepth: number = 100
+export const maxPages: number = 10000
+export const domainLimit: number | null = null
+export const visitExternalDomains: boolean = true
+
+// leaves Chromium process running after closing (uncomment lines in main.ts)
+// export const concurrency: number | null = null

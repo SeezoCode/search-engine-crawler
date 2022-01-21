@@ -1,6 +1,5 @@
 import {domainLimit, elasticIndex, maxDepth, maxPages, startingUrls, visitExternalDomains} from "./config";
 import {Crawler} from "./crawler";
-// import {fork} from "child_process";
 
 let crawler = new Crawler(startingUrls[0], maxDepth, maxPages, elasticIndex, domainLimit, visitExternalDomains)
 crawler.run().then()
@@ -11,9 +10,22 @@ process.on('SIGINT', async () => {
     process.exit(0)
 })
 
-// TODO: implement a better multithreading solution
-// fork("worker.js", [startingUrls[0]])
-// fork("worker.js", [startingUrls[1]])
-// fork("worker.js", [startingUrls[2]])
-// fork("worker.js", [startingUrls[3]])
+
+
+// Concurrent crawler
+// import {concurrency} from "./config";
+// import {Worker} from "worker_threads";
+// import "./worker"
+//
+// for (let i = 0; i < startingUrls.length; i++) {
+//     if (i < threads && i < startingUrls.length) {
+//         const worker = new Worker("./worker.js");
+//         worker.postMessage(startingUrls[i]);
+//         process.on('SIGINT', async () => {
+//             await worker.postMessage('exit');
+//             await console.log(`Exiting: ${startingUrls[i]}`)
+//         })
+//     }
+// }
+
 

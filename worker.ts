@@ -1,12 +1,17 @@
 import {Crawler} from "./crawler";
 import {domainLimit, elasticIndex, maxDepth, maxPages, visitExternalDomains} from "./config";
+import {parentPort} from "worker_threads";
 
-console.log(process.argv[2], "starting");
-let crawler = new Crawler(process.argv[2], maxDepth, maxPages, elasticIndex, domainLimit, visitExternalDomains)
-crawler.run().then()
+let crawler: Crawler | null = null;
 
-process.on('SIGINT', async () => {
-    await crawler.stop()
-    await console.log('\nExiting...')
-    process.exit(0)
+parentPort?.once('message', async (message: any) => {
+    console.log(message, "starting");
+    if (message != "exit") {
+        crawler = new Crawler(message, maxDepth, maxPages, elasticIndex, domainLimit, visitExternalDomains)
+        crawler.run().then()
+    }
+
+    if (message == "exit") {
+        await crawler?.stop()
+    }
 })
