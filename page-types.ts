@@ -29,7 +29,7 @@ export interface PageLink {
 interface PageBody {
     headings: PageBodyHeadings
     plaintext?: Array<string>
-    article?: Array<string> | null
+    article?: string | null
     internalLinks?: Array<PageLink>
     externalLinks?: Array<PageLink>
     imgLinks?: Array<string>

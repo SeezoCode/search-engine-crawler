@@ -177,7 +177,7 @@ export class CrawlPage {
                     h6: headings.h6
                 },
                 plaintext: CrawlPage.polishPlaintextToArray(bodyAsPlaintext),
-                article: article?.split("\n").filter(line => line.length > 0) || null,
+                article: article?.split("\n").filter(line => line.length > 0).join(" ") || null,
                 internalLinks: pageLinks.internal,
                 externalLinks: pageLinks.external,
                 imgLinks: []

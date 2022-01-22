@@ -1,6 +1,6 @@
 import {elasticAddress, timeUntilReindex} from "./config"
 import * as puppeteer from "puppeteer"
-import {Client} from "elasticsearch"
+import {Client, IndexDocumentParams} from "elasticsearch"
 import {CrawlPage} from "./page-crawler"
 import {Page} from "./page-types"
 
@@ -41,7 +41,7 @@ export class Crawler extends CrawlPage {
     async elasticIndex(body: Page) {
         const now = Date.now()
         // @ts-ignore
-        const index = await this.client.index({
+        const index: IndexDocumentParams<Page> = await this.client.index({
             index: this.index,
             body: body
         })
@@ -105,7 +105,7 @@ export class Crawler extends CrawlPage {
             // @ts-ignore
             const isPageIndexed: { hits: number, crawlerTimestamp: number, source: Page, id: string } = await this.isPageIndexed(url)
             if (isPageIndexed.hits > 0) {
-                console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Page was indexed ${isPageIndexed.hits}x ${Math.round((Date.now() - isPageIndexed.crawlerTimestamp) / 1000 / 60)}m ago: ${url}`)
+                console.log(`(${String(this.newlyCrawledPagesAmount).padStart(6, ' ')} / ${String(this.crawledPagesAmount).padStart(6, ' ')}) - Page was indexed (${isPageIndexed.id}) ${Math.round((Date.now() - isPageIndexed.crawlerTimestamp) / 1000 / 60)}m ago: ${url}`)
                 if (isPageIndexed.source.crawlerTimestamp + timeUntilReindex < Date.now()) {
                     console.log("reindexing")
                     return await this.reindexOldPage(isPageIndexed)
@@ -122,7 +122,7 @@ export class Crawler extends CrawlPage {
             await this.elasticIndex(isPageIndexed.source)
             return isPageIndexed.source
         } else {
-            console.log("Page is empty, deleting (id: " + isPageIndexed.id + ")")
+            console.log(`Page is empty, deleting (id: ${isPageIndexed.id})`)
             await this.deleteId(isPageIndexed.id)
             return null
         }
