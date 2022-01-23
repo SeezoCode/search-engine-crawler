@@ -75,8 +75,9 @@ export class CrawlPage {
         }
         for (let link of links) {
             if (link && link.href) {
+                const text = CrawlPage.polishPlaintextToArray(link.innerText).join(' ')
                 const linkObj = {
-                    innerText: CrawlPage.polishPlaintextToArray(link.innerText).join(' '),
+                    innerText: text.length > 0 ? text : "EmptyTextLink",
                     href: link.href,
                     bias: 0.
                 }
@@ -121,16 +122,14 @@ export class CrawlPage {
         return page.evaluate(() => {
             const article = document.querySelector("article")
             if (article) {
-                return article.innerHTML
+                return article.innerText
             }
             else return null
         })
     }
 
     private static polishPlaintextToArray(text: string): string[] {
-        const plaintext = text.replace(/[\n\t]/g, ' ').split(" ").filter(Boolean).join(" ")
-        const plaintextWords = plaintext.split(" ").filter(Boolean)
-        return plaintextWords.map(word => word.toLowerCase())
+        return text.replace(/[\t]/g, ' ').toLowerCase().split("\n").filter(Boolean)
     }
 
     async mapPageToObject(page: puppeteer.Page, url: string): Promise<Page> {
@@ -177,10 +176,10 @@ export class CrawlPage {
                     h6: headings.h6
                 },
                 plaintext: CrawlPage.polishPlaintextToArray(bodyAsPlaintext),
-                article: article?.split("\n").filter(line => line.length > 0).join(" ") || null,
+                article: article?.split("\n").filter(line => line.length > 0) || ["NoArticleFound"],
                 internalLinks: pageLinks.internal,
                 externalLinks: pageLinks.external,
-                imgLinks: []
+                imgLinks: null
             },
 
             url: this.cleanUrl(url),
