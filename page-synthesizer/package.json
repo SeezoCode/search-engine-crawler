@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "run": "npx tsc main.ts && node main.js",
-    "start": "npx tsc main.ts && node main.js",
+    "run": "npx tsc ../main.ts && node main.js",
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

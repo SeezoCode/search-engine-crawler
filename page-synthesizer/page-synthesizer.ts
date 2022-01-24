@@ -6,10 +6,10 @@ interface MetaTag {
     content: string
 }
 
-export class CrawlPage {
+export class SynthesizePage {
     constructor() {}
 
-    async crawlPage(browser: puppeteer.Browser, url: string): Promise<Page> {
+    async synthesize(browser: puppeteer.Browser, url: string): Promise<Page> {
         const page: puppeteer.Page = await browser.newPage();
         await page.goto(url, {
             waitUntil: 'networkidle0',
@@ -75,7 +75,7 @@ export class CrawlPage {
         }
         for (let link of links) {
             if (link && link.href) {
-                const text = CrawlPage.polishPlaintextToArray(link.innerText).join(' ')
+                const text = SynthesizePage.polishPlaintextToArray(link.innerText).join(' ')
                 const linkObj = {
                     innerText: text.length > 0 ? text : "EmptyTextLink",
                     href: link.href,
@@ -135,12 +135,12 @@ export class CrawlPage {
     async mapPageToObject(page: puppeteer.Page, url: string): Promise<Page> {
         const pageLinksPromise = this.getPageLinks(page)
         const bodyAsPlaintextPromise = this.getBodyAsPlaintext(page)
-        const metaPromise = CrawlPage.getMeta(page)
+        const metaPromise = SynthesizePage.getMeta(page)
         const languagePromise = this.getLanguage(page)
-        const headingsPromise = CrawlPage.getHeadings(page)
+        const headingsPromise = SynthesizePage.getHeadings(page)
         const articlePromise = this.getArticle(page)
 
-        const pageLinks = CrawlPage.determineLinkTypes(await pageLinksPromise, url)
+        const pageLinks = SynthesizePage.determineLinkTypes(await pageLinksPromise, url)
         const bodyAsPlaintext = await bodyAsPlaintextPromise
         const meta = await metaPromise
         const language = await languagePromise
@@ -175,7 +175,7 @@ export class CrawlPage {
                     h5: headings.h5,
                     h6: headings.h6
                 },
-                plaintext: CrawlPage.polishPlaintextToArray(bodyAsPlaintext),
+                plaintext: SynthesizePage.polishPlaintextToArray(bodyAsPlaintext),
                 article: article?.split("\n").filter(line => line.length > 0) || ["NoArticleFound"],
                 internalLinks: pageLinks.internal,
                 externalLinks: pageLinks.external,
