@@ -1,11 +1,11 @@
 import {elasticAddress, timeUntilReindex} from "./config"
 import * as puppeteer from "puppeteer"
 import {Client, IndexDocumentParams} from "elasticsearch"
-import {SynthesizePage} from "./page-synthesizer/page-synthesizer"
-import {Page} from "./page-synthesizer/page-types"
+import {ScrapePage} from "./page-scraper/page-scraper"
+import {Page} from "./page-scraper/page-types"
 
 
-export class Crawler extends SynthesizePage {
+export class Crawler extends ScrapePage {
     // @ts-ignore
     client = new Client({node: elasticAddress})
     browser: puppeteer.Browser | undefined
@@ -35,9 +35,6 @@ export class Crawler extends SynthesizePage {
     async launchBrowser() {
         return puppeteer.launch({
             headless: true,
-            args: [
-                "--no-sandbox",
-            ]
         });
     }
 
@@ -134,7 +131,7 @@ export class Crawler extends SynthesizePage {
     async handleElasticIndex(url: string) {
         if (!this.browser) throw new Error("Browser is not defined")
 
-        const page = await this.synthesize(this.browser, url)
+        const page = await this.scrape(this.browser, url)
 
         if (this.hasPageContent(page)) {
             this.newlyCrawledPagesAmount += 1

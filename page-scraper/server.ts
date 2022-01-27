@@ -1,5 +1,5 @@
 import * as puppeteer from "puppeteer";
-import {SynthesizePage} from "./page-synthesizer";
+import {ScrapePage} from "./page-scraper";
 const bodyParser = require("body-parser")
 
 const express = require('express');
@@ -7,7 +7,7 @@ const express = require('express');
 const app = express();
 app.use(bodyParser.json());
 
-const crawlPage = new SynthesizePage()
+const crawlPage = new ScrapePage()
 
 puppeteer.launch({
     headless: true,
@@ -15,9 +15,16 @@ puppeteer.launch({
         "--no-sandbox",
     ]
 }).then(browser => {
-    app.post('/crawler', async function (request: { body: any; }, response: { send: (arg0: any) => void; }) {
+    app.post('/crawler', async function (request: { body: any; }, response: any ) {
         console.log(request.body);      // your JSON
-        response.send(await crawlPage.synthesize(browser, request.body.url))
+        try {
+            response.send(await crawlPage.scrape(browser, request.body.url))
+        } catch (e: any) {
+            console.log(e)
+            return response.status(400).send({
+                message: "Server error occurred while scraping",
+            });
+        }
     });
 
     app.get('/', function (request: { body: any; }, response: { send: (arg0: any) => void; }) {

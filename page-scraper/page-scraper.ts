@@ -6,13 +6,14 @@ interface MetaTag {
     content: string
 }
 
-export class SynthesizePage {
+export class ScrapePage {
     constructor() {}
 
-    async synthesize(browser: puppeteer.Browser, url: string): Promise<Page> {
+    async scrape(browser: puppeteer.Browser, url: string): Promise<Page> {
         const page: puppeteer.Page = await browser.newPage();
         await page.goto(url, {
             waitUntil: 'networkidle0',
+            timeout: 120000
         });
         const doc = await this.mapPageToObject(page, url)
         await page.close()
@@ -75,7 +76,7 @@ export class SynthesizePage {
         }
         for (let link of links) {
             if (link && link.href) {
-                const text = SynthesizePage.polishPlaintextToArray(link.innerText).join(' ')
+                const text = ScrapePage.polishPlaintextToArray(link.innerText).join(' ')
                 const linkObj = {
                     innerText: text.length > 0 ? text : "EmptyTextLink",
                     href: link.href,
@@ -135,12 +136,12 @@ export class SynthesizePage {
     async mapPageToObject(page: puppeteer.Page, url: string): Promise<Page> {
         const pageLinksPromise = this.getPageLinks(page)
         const bodyAsPlaintextPromise = this.getBodyAsPlaintext(page)
-        const metaPromise = SynthesizePage.getMeta(page)
+        const metaPromise = ScrapePage.getMeta(page)
         const languagePromise = this.getLanguage(page)
-        const headingsPromise = SynthesizePage.getHeadings(page)
+        const headingsPromise = ScrapePage.getHeadings(page)
         const articlePromise = this.getArticle(page)
 
-        const pageLinks = SynthesizePage.determineLinkTypes(await pageLinksPromise, url)
+        const pageLinks = ScrapePage.determineLinkTypes(await pageLinksPromise, url)
         const bodyAsPlaintext = await bodyAsPlaintextPromise
         const meta = await metaPromise
         const language = await languagePromise
@@ -175,7 +176,7 @@ export class SynthesizePage {
                     h5: headings.h5,
                     h6: headings.h6
                 },
-                plaintext: SynthesizePage.polishPlaintextToArray(bodyAsPlaintext),
+                plaintext: ScrapePage.polishPlaintextToArray(bodyAsPlaintext),
                 article: article?.split("\n").filter(line => line.length > 0) || ["NoArticleFound"],
                 internalLinks: pageLinks.internal,
                 externalLinks: pageLinks.external,

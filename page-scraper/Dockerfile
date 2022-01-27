@@ -19,7 +19,7 @@ WORKDIR /app
 COPY package.json .
 COPY package-lock.json .
 COPY page-types.ts .
-COPY page-synthesizer.ts .
+COPY page-scraper.ts .
 COPY server.ts .
 
 RUN npm install
