@@ -22,8 +22,6 @@ import org.elasticsearch.client.RestClient
 data class Url(val url: String)
 
 suspend fun main() = runBlocking {
-//    println("Program arguments: ${args.joinToString()}")
-
     val ktorClient = HttpClient(CIO) {
         install(JsonFeature) {
             serializer = KotlinxSerializer()
@@ -47,29 +45,15 @@ suspend fun main() = runBlocking {
                 .setDefaultCredentialsProvider(credentialsProvider)
         }.build()
 
-//    val restClient = RestClient.builder(
-//        HttpHost("localhost", 9200)
-//    ).build()
-
     val transport: ElasticsearchTransport = RestClientTransport(
         restClient, JacksonJsonpMapper()
     )
 
     val elasticClient = ElasticsearchClient(transport)
 
-    val crawler = Crawler("https://github.com", ktorClient, "https://crawler-dkmligzhzq-lz.a.run.app/crawler", elasticClient, "se12")
-//    async {crawler.crawl()}.let {
-//        it.await()
-//        restClient.close()
-//    }
+    val crawler = Crawler("https://github.com/SeezoCode", ktorClient, "https://crawler-dkmligzhzq-lz.a.run.app/crawler", elasticClient, "se12")
     val a = async { crawler.handleCrawling() }
 
     a.await()
     restClient.close()
-//    // make a post request to the crawler with body containing url
-//    val response: Page = client.post("https://crawler-dkmligzhzq-lz.a.run.app/crawler") {
-//        contentType(ContentType.Application.Json)
-//        body = Url("https://google.com")
-//    }
-//    println(response.metadata)
 }
