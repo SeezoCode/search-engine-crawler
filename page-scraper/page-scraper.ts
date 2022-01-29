@@ -176,13 +176,11 @@ export class ScrapePage {
                     h5: headings.h5,
                     h6: headings.h6
                 },
-                plaintext: ScrapePage.polishPlaintextToArray(bodyAsPlaintext),
-                article: article?.split("\n").filter(line => line.length > 0) || ["NoArticleFound"],
+                plaintext: ScrapePage.polishPlaintextToArray(bodyAsPlaintext) || null,
+                article: article?.split("\n").filter(line => line.length > 0) || null,
                 internalLinks: pageLinks.internal,
                 externalLinks: pageLinks.external,
-                imgLinks: null
             },
-
             url: this.cleanUrl(url),
             crawlerTimestamp: new Date().getTime(),
             userRating: 0.,
