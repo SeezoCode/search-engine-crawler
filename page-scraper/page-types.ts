@@ -32,7 +32,6 @@ interface PageBody {
     article: Array<string> | null
     internalLinks: Array<PageLink>
     externalLinks: Array<PageLink>
-    imgLinks?: Array<string> | null
 }
 
 export interface Page {

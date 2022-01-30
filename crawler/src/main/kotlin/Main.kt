@@ -21,13 +21,16 @@ import org.elasticsearch.client.RestClient
 @Serializable
 data class Url(val url: String)
 
+const val domainLimit = 2000
+
+
 suspend fun main() = runBlocking {
     val ktorClient = HttpClient(CIO) {
         install(JsonFeature) {
             serializer = KotlinxSerializer()
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 120000
+            requestTimeoutMillis = 160_000
         }
     }
 
@@ -40,10 +43,10 @@ suspend fun main() = runBlocking {
     val restClient = RestClient.builder(
         HttpHost("localhost", 9200)
     ).setHttpClientConfigCallback { httpClientBuilder ->
-            httpClientBuilder.disableAuthCaching()
-            httpClientBuilder
-                .setDefaultCredentialsProvider(credentialsProvider)
-        }.build()
+        httpClientBuilder.disableAuthCaching()
+        httpClientBuilder
+            .setDefaultCredentialsProvider(credentialsProvider)
+    }.build()
 
     val transport: ElasticsearchTransport = RestClientTransport(
         restClient, JacksonJsonpMapper()
@@ -51,7 +54,17 @@ suspend fun main() = runBlocking {
 
     val elasticClient = ElasticsearchClient(transport)
 
-    val crawler = Crawler("https://github.com/SeezoCode", ktorClient, "https://crawler-dkmligzhzq-lz.a.run.app/crawler", elasticClient, "se12")
+    val crawler = Crawler(
+        listOf("https://github.com/"),
+        ktorClient,
+        "https://crawler-dkmligzhzq-lz.a.run.app/crawler",
+//        "http://localhost:8080/crawler",
+        elasticClient,
+        "se13",
+        concurrency = 3,
+        language = "en", // for czech it is "cs"
+        topLevelDomains = listOf("com", "org", "edu")
+    )
     val a = async { crawler.handleCrawling() }
 
     a.await()

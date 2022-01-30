@@ -16,7 +16,7 @@ puppeteer.launch({
     ]
 }).then(browser => {
     app.post('/crawler', async function (request: { body: any; }, response: any ) {
-        console.log(request.body);      // your JSON
+        console.log("url:",request.body.url)
         try {
             response.send(await crawlPage.scrape(browser, request.body.url))
         } catch (e: any) {

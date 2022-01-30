@@ -49,7 +49,7 @@ data class PageBodyHeadings (
 @Serializable
 data class PageLink (
     val innerText: String?,
-    val href: String,
+    var href: String,
     val bias: Double?,
 ) {
     constructor() : this(
@@ -66,7 +66,6 @@ data class PageBody (
     val article: List<String>?,
     val internalLinks: List<PageLink>?,
     val externalLinks: List<PageLink>?,
-    val imgLinks: List<String>?,
 ) {
     constructor() : this(
         headings = PageBodyHeadings(),
@@ -74,7 +73,6 @@ data class PageBody (
         article = null,
         internalLinks = null,
         externalLinks = null,
-        imgLinks = null,
     )
 }
 @Serializable
