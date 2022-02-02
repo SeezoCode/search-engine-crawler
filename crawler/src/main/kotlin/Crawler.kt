@@ -22,14 +22,14 @@ class Crawler(
     private var crawlingDomainsCount = 0
 
     init {
-        startingUrls.forEach { domainManager.add(it) }
+        startingUrls.forEach { domainManager.addSynchronous(it) }
     }
 
     suspend fun handleCrawling() = coroutineScope {
         while (true) {
             if (crawlingDomainsCount < concurrency) {
                 launch { crawlAvailableDomain() }
-                delay(1000)
+                delay(100)
             } else {
                 delay(100)
             }
@@ -70,6 +70,7 @@ class Crawler(
         println("Crawling domain ${domain.domain}")
         while (domain.pageQueue.get() != null) {
             withContext(Dispatchers.Default) { handlePageScrape(domain.pageQueue) }
+            delay(300) // rate limit
         }
         println("Done crawling domain ${domain.domain}")
         domain.isBeingCrawled = false

@@ -57,11 +57,11 @@ suspend fun main() = runBlocking {
     val crawler = Crawler(
         listOf("https://github.com/"),
         ktorClient,
-        "https://crawler-dkmligzhzq-lz.a.run.app/crawler",
-//        "http://localhost:8080/crawler",
+//        "https://crawler-dkmligzhzq-lz.a.run.app/crawler",
+        "http://localhost:8080/crawler",
         elasticClient,
         "se13",
-        concurrency = 3,
+        concurrency = 6,
         language = "en", // for czech it is "cs"
         topLevelDomains = listOf("com", "org", "edu")
     )

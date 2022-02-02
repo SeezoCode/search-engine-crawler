@@ -16,7 +16,7 @@ class DomainPageQueue {
 
     private fun isValidUrl(url: String): Boolean {
         val cUrl = cleanUrl(url)
-        val forbiddenSuffixed = listOf(".pdf", ".zip", ".png", ".jpg", ".gif")
+        val forbiddenSuffixed = listOf(".pdf", ".zip", ".png", ".jpg", ".gif", ".mp4")
         return cUrl.startsWith("http") && !forbiddenSuffixed.any { cUrl.endsWith(it) }
     }
 
@@ -28,7 +28,7 @@ class DomainPageQueue {
                 val queue = queuesMap[it]
                 if (queue != null) {
                     if (queue.isNotEmpty()) {
-                        return@get queue.first()
+                        return@get queue.firstOrNull()
                     }
                 }
             }

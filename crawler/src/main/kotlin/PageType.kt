@@ -52,6 +52,7 @@ data class PageLink (
     var href: String,
     val bias: Double?,
 ) {
+    @Suppress("unused")
     constructor() : this(
         innerText = null,
         href = "",
@@ -86,6 +87,7 @@ data class Page (
     val bias: Double,
     val createdTimestamp: Long
 ) {
+    @Suppress("unused")
     constructor() : this(
         metadata = PageMetadata(),
         body = PageBody(),
