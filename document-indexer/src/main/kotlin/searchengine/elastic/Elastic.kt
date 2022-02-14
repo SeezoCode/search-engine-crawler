@@ -19,7 +19,11 @@ import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.client.CredentialsProvider
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.elasticsearch.client.RestClient
-import searchengine.plugins.*
+import searchengine.indexer.cleanUrl
+import searchengine.indexer.getDomain
+import searchengine.types.BackLink
+import searchengine.types.ForwardLink
+import searchengine.types.PageType
 
 class Elastic(private val elasticIndex: String? = null) {
     private val client: ElasticsearchClient
@@ -59,7 +63,7 @@ class Elastic(private val elasticIndex: String? = null) {
             client.search({ s: SearchRequest.Builder ->
                 s.index(index).query { query ->
                     query.term { term ->
-                        term.field("url").value { value ->
+                        term.field("address.url").value { value ->
                             value.stringValue(url)
                         }
                     }
@@ -83,7 +87,7 @@ class Elastic(private val elasticIndex: String? = null) {
             doc = PageType(docUrl)
         }
         val backLinksWithOrigin: List<BackLink> =
-            (listOf(originBackLink) + doc.inferredData.backLinks).distinctBy { it.source }
+            (doc.inferredData.backLinks + originBackLink).distinctBy { it.source }
 
         doc.inferredData.backLinks = backLinksWithOrigin
         doc.inferredData.domainName = getDomain(docUrl)

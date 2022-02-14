@@ -10,6 +10,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import searchengine.elastic.Elastic
+import searchengine.indexer.IndexPageByHTML
+import searchengine.indexer.cleanUrl
 
 @Serializable
 data class Response(val url: String, val html: String?, val status: Int)
@@ -31,7 +33,7 @@ class Server(port: Int) {
                 val elasticDocs = elastic.docsByUrlOrNull(cUrl)
 
                 if (response.html != null) {
-                    val pageBody = IndexPageByHTML(response.html, cUrl, listOf())
+                    val pageBody = IndexPageByHTML(response.html, response.url, listOf())
                     println(pageBody.metadata.title)
                     val docId: String
                     if (elasticDocs != null) {
@@ -44,8 +46,8 @@ class Server(port: Int) {
                     }
                     println("indexed $cUrl at $docId")
                     println(pageBody.body.links.internal.count())
-                    elastic.putDocsBacklinkInfoByUrl(pageBody.body.links.internal, cUrl)
-                    elastic.putDocsBacklinkInfoByUrl(pageBody.body.links.external, cUrl)
+                    elastic.putDocsBacklinkInfoByUrl(pageBody.body.links.internal.distinctBy { it.href }, cUrl)
+                    elastic.putDocsBacklinkInfoByUrl(pageBody.body.links.external.distinctBy { it.href }, cUrl)
                     call.respond(200)
                 } else call.respond(400)
             }

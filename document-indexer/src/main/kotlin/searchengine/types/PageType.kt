@@ -1,4 +1,4 @@
-package searchengine.plugins
+package searchengine.types
 
 open class Metadata(
     open val title: String,
@@ -27,6 +27,7 @@ open class ForwardLink(
     open val text: String,
     open val href: String,
 ) {
+    @Suppress("unused")
     constructor() : this("", "")
 }
 
@@ -50,17 +51,28 @@ open class BackLink(
     open val text: String,
     open val source: String,
 ) {
+    @Suppress("unused")
     constructor() : this("", "")
+}
+
+open class Ranks(
+    @Suppress("unused")
+    open val score: Double,
+    @Suppress("unused")
+    open val computeRoundId: Long?,
+    @Suppress("unused")
+    open val smartRank: Double?,
+) {
+    constructor() : this(0.0, null, null)
 }
 
 open class InferredData(
     open var backLinks: List<BackLink>,
-    open val pagerank: Double?,
-    open val smartRank: Double?,
+    open val ranks: Ranks,
     open var domainName: String,
 ) {
-    constructor() : this(listOf(), null, null, "")
-    constructor(backLinks: List<BackLink>) : this(backLinks, null, null, "")
+    constructor() : this(listOf(), Ranks(), "")
+//    constructor(backLinks: List<BackLink>) : this(backLinks, Ranks(), null, "")
 }
 
 enum class CrawlerStatus {
@@ -71,21 +83,38 @@ enum class CrawlerStatus {
     Error,
 }
 
+open class Address(
+    @Suppress("unused")
+    open val url: String,
+    @Suppress("unused")
+    open var urlAsText: List<String>,
+) {
+    constructor() : this("", listOf())
+}
+
 open class PageType(
     open val metadata: Metadata,
     open val body: Body,
     open val inferredData: InferredData,
 
-    open val url: String,
+    open val address: Address,
     open val crawlerTimestamp: Long = System.currentTimeMillis(),
     open val crawlerStatus: CrawlerStatus,
 ) {
-    constructor() : this(Metadata(), Body(), InferredData(), "", System.currentTimeMillis(), CrawlerStatus.NotCrawled)
+    constructor() : this(
+        Metadata(),
+        Body(),
+        InferredData(),
+        Address(),
+        System.currentTimeMillis(),
+        CrawlerStatus.NotCrawled
+    )
+
     constructor(url: String) : this(
         Metadata(),
         Body(),
         InferredData(),
-        url,
+        Address(url, splitUrlToWords(url)),
         System.currentTimeMillis(),
         CrawlerStatus.NotCrawled
     )

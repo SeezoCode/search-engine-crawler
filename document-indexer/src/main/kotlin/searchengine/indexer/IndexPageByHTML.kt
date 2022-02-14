@@ -1,7 +1,8 @@
-package searchengine.plugins
+package searchengine.indexer
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import searchengine.types.*
 
 
 class MetadataByHTML(doc: Document) : Metadata() {
@@ -41,49 +42,33 @@ class LinksByHTML(doc: Document, url: String) : BodyLinks() {
             val href = link.attr("href")
             if (href == "" || !href.startsWith("http")) continue
             if (getDomain(href).startsWith(getDomain(url))) {
-                internal.add(ForwardLink(link.text(), cleanUrl(href)))
+                internal.add(ForwardLink(cleanText(link.text()), cleanUrl(href)))
             } else {
-                external.add(ForwardLink(link.text(), cleanUrl(href)))
+                external.add(ForwardLink(cleanText(link.text()), cleanUrl(href)))
             }
         }
     }
 }
 
-fun cleanUrl(url: String): String {
-    var href = url
-    href = href.split("#")[0]
-    href = href.split("?")[0]
-    href = href.replace("www.", "")
-    if (href.endsWith("/")) {
-        href = href.substring(0, href.length - 1)
-    }
-    return href
-}
-
 class BodyByHTML(doc: Document, url: String) : Body() {
     override val headings = HeadingsByHTML(doc)
     override val boldText = doc.select("b").map { it.text() }.toList()
-    override val article = doc.select("article").map { it.text() }.toList()
+    override val article = listOf<String>() // doc.select("article").map { it.text() }.toList()
     override val links = LinksByHTML(doc, url)
 }
 
 class InferredDataByHTML(url: String, override var backLinks: List<BackLink>) : InferredData() {
-    override val pagerank: Double? = null
-    override val smartRank: Double? = null
+    override val ranks: Ranks = Ranks()
     override var domainName: String = getDomain(url)
 }
 
-fun getDomain(url: String): String {
-    val domain = url.substringAfter("//")
-    return domain.substringBefore("/")
-}
-
+//                                  url is not cleaned
 class IndexPageByHTML(html: String, url: String, backLinks: List<BackLink>) : PageType() {
     private val doc = Jsoup.parse(html)
     override val metadata = MetadataByHTML(doc)
     override val body = BodyByHTML(doc, cleanUrl(url))
 
-    override val url = cleanUrl(url)
+    override val address = Address(cleanUrl(url), splitUrlToWords(url))
     override var inferredData = InferredDataByHTML(cleanUrl(url), backLinks)
     override val crawlerStatus: CrawlerStatus = CrawlerStatus.Crawled
     override val crawlerTimestamp: Long = System.currentTimeMillis()

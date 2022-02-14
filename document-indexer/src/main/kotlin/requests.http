@@ -1,0 +1,20 @@
+###
+POST http://localhost:8000/crawler
+Content-Type: application/json
+
+{
+  "url": "https://developer.mozilla.org/en-US/docs/Web/CSS"
+}
+
+###
+
+POST http://localhost:8000/crawler
+Content-Type: application/json
+
+{
+  "url": "https://seznamzpravy.cz"
+}
+
+###
+
+
